@@ -1,0 +1,130 @@
+<!--Main-->
+<div id="uploadLists-tilelayout"></div>
+
+<!-- container grid templates -->
+<script id="uploadLists-template" type="text/x-kendo-template">
+    // This is the error message which show if there is any 
+    // missing field or any missing data
+    {{#if errorExists}}
+        <div class="alert alert-danger" role="alert">
+            <i>File has some errors. Please enter the missing data and re-upload the file.</i>
+        </div>
+    {{else}}
+        <div class="alert alert-success" role="alert">
+            <i>No error found. File is safe to save.</i>
+        </div>
+    {{/if}}
+    <div id="grid" style="font-size: small;"></div>
+</script>
+
+<script>
+    //Tile Layout Configuration
+    let userListsTilelayout = $("#uploadLists-tilelayout").kendoTileLayout({
+        containers: [
+            {
+                colSpan: 1,
+                rowSpan: 4,
+                header: {
+                    text: `List of Uploaded data`
+                },
+                bodyTemplate: kendo.template($("#uploadLists-template").html())
+            }
+        ],
+        columns: 1,
+        columnsWidth: "100%",
+        rowsHeight: "auto",
+        reorderable: false,
+        resizable: false,
+    }).data("kendoTileLayout");
+
+    $(document).ready(function () {
+        uploadedGrid();
+    });
+
+    function uploadedGrid() {
+        $("#grid").kendoGrid({
+            dataSource: {
+                data: [
+                    // This is where we are storing
+                    // data from hanldebars
+                    {{#each excelData}} //excelData is sent by handlebars from /Uploaded route
+                    {
+                        errors: `{{{errors}}}`,
+                        field_name: `{{{field_name}}}`
+                    },
+                    {{/each}}
+                ],
+                schema: {
+                    model: {
+                        fields: {
+                            errors: { type: "string" },
+                            field_name: { type: "string" }
+                        }
+                    }
+                },
+                aggregate: [
+                    {field: 'errors', aggregate: 'count'},
+                    {field: 'field_name', aggregate: 'sum'}
+                ]
+            },
+            dataBound: function(e) {
+                let rows = e.sender.tbody.children();
+
+                for(let i=0; i < rows.length; i++) {
+                    let row = $(rows[i]),
+                    dataItem = e.sender.dataItem(row);
+                    if(dataItem.errors !== '') {
+                        $('#saveBtn').hide();
+                        row.addClass('alert alert-danger');
+                        row.removeClass('k-alt');
+                    }
+                }
+            },
+            height: 450,
+            sortable: true,
+            pageable: false,
+            toolbar: [
+                {
+                    template: `
+                        <button id="saveBtn" onclick="saveData()" class="k-button"><i class="k-icon k-i-save"></i>Save Data</button>
+                    `
+                },
+                "search"
+            ],
+            columns: [
+                { field: "errors", title: "Errors", template: `#= errors #`, width: 140 },
+                { field: "field_name", title: "Total field_name", footerTemplate: `#=kendoNumberFormat(data.field_name.sum, 'n0')#`, attributes: {'class': 'text-center'}, footerAttributes: {'class': 'text-center'}, width: 120 },
+            ]
+        });
+    }
+
+    function saveData(){
+        kendo.ui.progress($("#grid"), true);
+
+        let gridData = $("#grid").data('kendoGrid').dataSource.data().toJSON(),
+        errorFreeData = gridData.filter(a=>!a.errors);
+        
+        $.post('/api/bulk/create', {models: JSON.stringify(errorFreeData)}, (response, status)=>{
+            kendoPopUpNotifications('success', 'Successfully saved!');
+            $('#saveBtn').prop('disabled', true);
+            kendo.ui.progress($('body'), false);
+        }).error(()=>{
+            let content = `
+            <div class="text-center">
+                <i class="k-icon k-i-info-circle mb-3" style="font-size: 40px"></i> 
+                <br> 
+                <span class="mb-3">
+                    Opps! Something went wrong. Please contact support.
+                </span> 
+            </div>`
+            kAlert('Error', content);
+        })
+    };
+
+    function kAlert(title, content) {
+        $("<div></div>").kendoAlert({
+            title: title,
+            content: content
+        }).data("kendoAlert").open();
+    }
+</script>

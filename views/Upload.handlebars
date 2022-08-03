@@ -1,0 +1,70 @@
+<!--XLSX script || Uncomment the following line if you want to read excel file-->
+<!--<script lang="javascript" src="/js/xlsx.full.min.js"></script>-->
+
+<!--Main-->
+<div class="mx-auto mt-5" style="width:400px; height:500px">
+    <!--Upload image-->
+    <img class="rounded-circle mx-auto d-block" src="/images/upload.png" style="padding-bottom:10px;" height="300px" alt="upload image"><br>
+    <!--Download template button-->
+    <a class="text-center btn btn-block btn-warning mb-2" href="">Download template</a>
+
+    <form method="post" enctype="multipart/form-data" action="/Upload/Orders/Uploaded" onsubmit="return handleSubmit()">
+        <!--Upload Button-->
+        <div class="custom-file mb-2">
+            <input type="file" class="custom-file-input" name="upFile">
+            <label class="custom-file-label" for="upFile">Choose files</label>
+        </div>
+
+        <!--Submit Button-->
+        <div class="input-group" style="padding-bottom:10px;">
+            <button id="upload_button" class="btn btn-info btn-block" type="submit">Upload</button>
+        </div>
+    </form>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+        
+    });
+    $(".custom-file-input").on("change", function() {
+        var fileName = $(this).val().split("\\").pop();
+        $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+        if (fileName.includes('.xlsx')){
+            $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+            
+            // --- The following info is for reading Excel file --- //
+
+            // var files = e.target.files, f = files[0];
+            // var reader = new FileReader();
+            // reader.onload = function(e) {
+            //     let colValues = [],
+            //     data = new Uint8Array(e.target.result),
+            //     workbook = XLSX.read(data, {type: 'array'}),
+            //     first_sheet_name = workbook.SheetNames[0],
+            //     worksheet = workbook.Sheets[first_sheet_name],
+            //     xlsx_headers = get_header_row(worksheet).map(a=>{return a.replace(/\s/g, '')});
+            //     let found = required_headers.every(r=> xlsx_headers.includes(r));
+            //     console.log(found);
+            //     if (found){
+            //         $("#upload_button").prop('disabled', false);
+            //     } else {
+            //         $("#upload_button").prop('disabled', true);
+            //         let message = 
+            //         `<p>The following field(s) are missing from the Excel file.</p>
+            //         <p>Please add the following field(s) before uploading</p>
+            //         <ul><li>
+            //             ${required_headers.filter(a=>!xlsx_headers.includes(a)).map(a=>a).join('</li><li>')}
+            //         </li></ul>`
+            //         $(this).siblings(".custom-file-label").addClass("selected").html("");
+            //         kendo.alert(message);
+            //     }
+            // };
+            // reader.readAsArrayBuffer(f);
+        } else
+        {
+            $("#upload_button").prop('disabled', true);
+            return kendo.alert('Please choose ".xlsx" formatted file.');
+        }
+    });
+</script>
