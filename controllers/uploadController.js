@@ -44,8 +44,8 @@ async function parseExcelData(fullPath,req,res){
         {field: 'date_of_birth', label: 'Date of birth', required: false, type: 'date', validationFunction: isDate},
         {field: 'email_address', label: 'Email address', required: true, type: 'string', validationFunction: isEmail}
     ];
-    //Grab CSV file
-    let csvFile = xlsx.readFile(fullPath, {
+    //Grab Excel file
+    let xlFile = xlsx.readFile(fullPath, {
         type: 'array',
         cellDates:true, // To recognise date
         cellNF:false, 
@@ -56,9 +56,9 @@ async function parseExcelData(fullPath,req,res){
     let excelData = [];
     
     // Get all sheet names from Excel file
-    let sheet_name_list = csvFile.SheetNames;
+    let sheet_name_list = xlFile.SheetNames;
     // Get first sheet's data
-    let sheetData = xlsx.utils.sheet_to_json(csvFile.Sheets[sheet_name_list[0]]);
+    let sheetData = xlsx.utils.sheet_to_json(xlFile.Sheets[sheet_name_list[0]]);
     
     // Declaring a variable to hold if 
     // any value is missing. If any field is missing then
