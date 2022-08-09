@@ -47,11 +47,12 @@
                 data: [
                     // This is where we are storing
                     // data from hanldebars
-                    {{#each excelData}} //excelData is sent by handlebars from /Uploaded route
-                    {
-                        errors: `{{{errors}}}`,
-                        field_name: `{{{field_name}}}`
-                    },
+                    {{#each excelData}}//excelData is sent by handlebars from the controller
+                        {
+                            {{#each this}} 
+                                '{{@key}}': '{{this}}',
+                            {{/each}}
+                        },
                     {{/each}}
                 ],
                 schema: {

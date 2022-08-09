@@ -2,19 +2,22 @@ var express = require('express'),
     router = express.Router(),
     xlsx = require('xlsx');
 
+// Importing our Multer middleware from '/utils' folder
 const {localUploadMiddleware} = require('../utils/uploadFiles');
-const {isDate, isNumeric, isBoolean, isString} = require('../utils/validations');
+
+// Importing validation methods
+const {isEmpty, isDate, isNumeric, isBoolean, isString, isEmail} = require('../utils/validations');
 
 // Upload route for Excel File
 // This router will just allow user
 // to download Template file and
 // to upload Excel file
-router.get('/Upload', function (req, res) {
-    res.render('AWB/Upload/Upload', {
+router.get('/', function (req, res) {
+    res.render('Upload', {
         layout: 'kendo',
-        title: "Upload Orders Data",
+        title: "Upload Data",
         sessionData: req.session,
-        nav_name: '" Order Data"'
+        nav_name: '" List of Data"'
     });
 });
 
@@ -33,12 +36,13 @@ router.post('/Uploaded', localUploadMiddleware.single('upFile'), (req, res, next
 });
 
 async function parseExcelData(fullPath,req,res){
-    // Declaring excel schema
+    // Defining excel schema
     let schema = [
-        {field: 'contact_number', label: 'Phone number', required: true, type: 'number'},
-        {field: 'contact_name', label: 'Customer name', required: true, type: 'string'},
-        {field: 'marital_status', label: 'Marital status', required: true, type: 'boolean'},
-        {field: 'date_of_birth', label: 'Date of birth', required: false, type: 'date'},
+        {field: 'contact_number', label: 'Phone number', required: true, type: 'number', validationFunction: isNumeric},
+        {field: 'contact_name', label: 'Customer name', required: true, type: 'string', validationFunction: isString},
+        {field: 'marital_status', label: 'Marital status', required: true, type: 'boolean', validationFunction: isBoolean},
+        {field: 'date_of_birth', label: 'Date of birth', required: false, type: 'date', validationFunction: isDate},
+        {field: 'email_address', label: 'Email address', required: true, type: 'string', validationFunction: isEmail}
     ];
     //Grab CSV file
     let csvFile = xlsx.readFile(fullPath, {
@@ -63,68 +67,53 @@ async function parseExcelData(fullPath,req,res){
     // a bootstrap success alert will be shown.
     let errorExists = false;
     
-    // Looping through the sheets data to create a new array
+    // Looping through each row of Excel data to create a new array
     // which will be sent to the Uploaded page
     for (let i = 0; i < sheetData.length; i++){
-        let item = sheetData[i];
-        item.error = [];
-        item.isError = false;
+        let row = sheetData[i];
+        row.error = [];
+        row.isError = false;
 
-        // validation for required field
-        if(item['field_name'] === undefined || item['field_name'] === null || item['field_name'] === '') {
-            // if field_name not found or null or empty
-            item.isError = true;
-            item.error.push('Invalid {{field_name}}');
-            errorExists = true;
-        } else {
-            // if field_name is found, now validate
-            // field_name is in correct format
-            
-            // Use any one of the following validation
-            // depending of the use case
-
-            // this validation is for NUMBER
-            if (!isNumeric(item['field_name'])) {
-                item['field_name'] = 0;
-                item.isError = true;
-                item.error.push('Invalid {{field_name}} ');
-                errorExists = true;
-            }
-            // this validation is for DATE
-            if (!isDate(item['field_name'])) {
-                item['field_name'] = null;
-                item.isError = true;
-                item.error.push('Invalid {{field_name}} ');
-                errorExists = true;
-            }
-            // this validation is for BOOLEAN
-            if (!isBoolean(item['field_name'])) {
-                item['field_name'] = null;
-                item.isError = true;
-                item.error.push('Invalid {{field_name}} ');
-                errorExists = true;
-            }
-            // this validation is for STRING
-            if (!isString(item['field_name'])) {
-                item['field_name'] = null;
-                item.isError = true;
-                item.error.push('Invalid {{field_name}} ');
-                errorExists = true;
-            }
+        // Looping through each column of the schema
+        // Our purpose is to check if the Excel file has the fields which 
+        // are defined in the Schema.
+        for (let j = 0; j < schema.length; j++) {
+            let column = schema[j];
+            // Checking if the column is required
+            if(column.required) {
+                // If required, then checking if the column is empty
+                if(isEmpty(row[`${column.field}`])) {
+                    // if column not found or null or empty 
+                    // in the Excel file, then hold the error
+                    row.isError = true;
+                    row.error.push(`Invalid ${column.field}`);
+                    errorExists = true;
+                } else {
+                    // if column is found in the Excel, 
+                    // now validate if the column is in correct format
+                    if (!column.validationFunction(row[`${column.field}`])) {
+                        row[`${column.field}`] = null;
+                        row.isError = true;
+                        row.error.push(`${column.field} is not in ${column.type} format`);
+                        errorExists = true;
+                    }
+                }
+            }  
         }
 
-        item.error.join(', ');
-        excelData.push({
-            errors: item.error,
-            isError: item.isError,
-            field_name: item['field_name']
-        });
+        // Now all the errors will be joined so
+        // that we can present it on the front-end
+        row.error.join(', ');
+
+        // Push the whole row in the new array
+        excelData.push(row);
     };
     
     res.render('/Uploaded', {
         layout: 'kendo',
         title: 'View Uploaded Data',
         excelData: excelData,
+        dataSchema: schema,
         filename: fullPath,
         errorExists: errorExists
     });
